@@ -22,7 +22,7 @@ func (r *DummyReconciler) createPodDefinition(dummy *dummyv1alpha1.Dummy) (*core
 
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%s", dummy.Name, "pod"),
+			Name:      dummy.Name,
 			Namespace: dummy.Namespace,
 			Labels:    labels,
 		},

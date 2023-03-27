@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -45,6 +44,7 @@ const dummyFinalizer = "dummy/finalizer"
 
 //+kubebuilder:rbac:groups=dummy.alexxsilvers,resources=dummies,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=dummy.alexxsilvers,resources=dummies/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=dummy.alexxsilvers,resources=dummies/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -76,6 +76,7 @@ func (r *DummyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	))
 
 	if dummy.Status.SpecEcho != dummy.Spec.Message {
+		logger.Info("Write new message to the 'status.specEcho'")
 		dummy.Status.SpecEcho = dummy.Spec.Message
 		statusUpdateErr := r.Status().Update(ctx, dummy)
 		if statusUpdateErr != nil {
@@ -98,7 +99,7 @@ func (r *DummyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		}
 	}
 
-	// Check, that we added finalizer If not - try to add
+	// Check, that we added finalizer If not add new one
 	if !controllerutil.ContainsFinalizer(dummy, dummyFinalizer) {
 		logger.Info("Add finalizer for Dummy")
 		if ok := controllerutil.AddFinalizer(dummy, dummyFinalizer); !ok {
@@ -137,6 +138,7 @@ func (r *DummyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	foundPod := &corev1.Pod{}
 	err = r.Get(ctx, types.NamespacedName{Namespace: dummy.Namespace, Name: dummy.Name}, foundPod)
 	if err != nil {
+		logger.Error(err, "Failed to get Dummy's pod")
 		if errors.IsNotFound(err) { // create new one
 			pod, podDefinitionErr := r.createPodDefinition(dummy)
 			if podDefinitionErr != nil {
@@ -150,9 +152,27 @@ func (r *DummyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 				return ctrl.Result{}, createPodErr
 			}
 
-			// Pod created successfully
-			// We will requeue the reconciliation so that we can ensure the state of this pod
-			return ctrl.Result{RequeueAfter: time.Minute}, nil
+			return ctrl.Result{}, nil
+		}
+	} else { // Pod founded - need to track pod status
+		if foundPod.Status.Phase != dummy.Status.PodStatus {
+			logger.Info("Write new status to the 'status.podStatus'")
+			dummy.Status.PodStatus = foundPod.Status.Phase
+			statusUpdateErr := r.Status().Update(ctx, dummy)
+			if statusUpdateErr != nil {
+				logger.Error(statusUpdateErr, "Failed to update Dummy 'status.podStatus'")
+				return ctrl.Result{}, statusUpdateErr
+			}
+
+			// Re-fetch the dummy resource after update the status to get the actual status of dummy
+			err = r.Get(ctx, req.NamespacedName, dummy)
+			if err != nil {
+				if errors.IsNotFound(err) { // Instance not found
+					return ctrl.Result{}, nil
+				}
+
+				return ctrl.Result{}, err
+			}
 		}
 	}
 

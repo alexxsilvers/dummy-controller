@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -31,7 +32,8 @@ type DummySpec struct {
 
 // DummyStatus defines the observed state of Dummy
 type DummyStatus struct {
-	SpecEcho string `json:"specEcho,omitempty"`
+	SpecEcho  string      `json:"specEcho,omitempty"`
+	PodStatus v1.PodPhase `json:"podStatus,omitempty"`
 }
 
 //+kubebuilder:object:root=true
