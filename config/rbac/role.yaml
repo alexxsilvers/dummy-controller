@@ -1,0 +1,33 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - dummy.alexxsilvers
+  resources:
+  - dummies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dummy.alexxsilvers
+  resources:
+  - dummies/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - dummy.alexxsilvers
+  resources:
+  - dummies/status
+  verbs:
+  - get
+  - patch
+  - update
