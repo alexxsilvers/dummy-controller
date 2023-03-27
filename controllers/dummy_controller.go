@@ -163,16 +163,6 @@ func (r *DummyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 				logger.Error(statusUpdateErr, "Failed to update Dummy 'status.podStatus'")
 				return ctrl.Result{}, statusUpdateErr
 			}
-
-			// Re-fetch the dummy resource after update the status to get the actual status of dummy
-			err = r.Get(ctx, req.NamespacedName, dummy)
-			if err != nil {
-				if errors.IsNotFound(err) { // Instance not found
-					return ctrl.Result{}, nil
-				}
-
-				return ctrl.Result{}, err
-			}
 		}
 	}
 
